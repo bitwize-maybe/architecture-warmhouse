@@ -1,0 +1,20 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title Тёплый дом — контекст текущей системы (As-Is)
+
+Person(user, "Пользователь", "Владелец дома")
+Person(technician, "Специалист по подключению", "Устанавливает и подключает оборудование")
+
+System(smarthome, "Тёплый дом", "Монолитная система управления отоплением и мониторинга температуры")
+
+System_Ext(heating, "Устройства управления отоплением", "Включают и выключают отопление")
+System_Ext(sensors, "Датчики температуры", "Измеряют температуру в доме")
+
+Rel(user, smarthome, "Включает и выключает отопление, просматривает температуру")
+Rel(technician, smarthome, "Регистрирует и настраивает подключаемое оборудование")
+Rel(smarthome, heating, "Отправляет команды включения и выключения")
+Rel(smarthome, sensors, "Запрашивает текущую температуру")
+Rel(sensors, smarthome, "Возвращают показания температуры")
+
+@enduml
