@@ -1,0 +1,43 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Тёплый дом — типовая структура сервиса управления
+
+Container(web, "Веб-приложение", "Веб-клиент")
+Container(automation, "Сервис автоматизации", "Go, HTTP API")
+Container(access, "Сервис управления доступом", "Go, HTTP API")
+Container(registry, "Сервис подключения устройств", "Go, HTTP API")
+ContainerDb(db, "Общая БД", "PostgreSQL", "Схема heating, lighting или gates")
+System_Ext(device, "Устройство", "Отопление, светильник или замок ворот")
+
+Container_Boundary(control, "Сервис управления: отопление / освещение / ворота") {
+    Component(api, "HTTP API", "Go", "Команды и запрос состояния")
+    Component(commands, "Обработчик команд", "Go", "Проверка команды, срока действия и повторов")
+    Component(state, "Менеджер состояния", "Go", "Результаты команд и подтверждённое состояние")
+    Component(adapter, "Адаптер устройства", "Go", "Команды и чтение состояния")
+    Component(accessClient, "Клиент доступа", "Go", "Проверка прав")
+    Component(registryClient, "Клиент реестра", "Go", "Параметры и возможности")
+    Component(repo, "Репозиторий", "Go", "Команды и состояние")
+}
+
+Rel(web, api, "Управляет устройством", "HTTPS/JSON")
+Rel(automation, api, "Вызывает команды от имени владельца", "HTTP/JSON")
+Rel(api, accessClient, "Проверяет права")
+Rel(accessClient, access, "Проверяет доступ к дому и действию", "HTTP/JSON")
+Rel(api, commands, "Передаёт команду")
+Rel(api, state, "Получает состояние")
+Rel(commands, registryClient, "Проверяет устройство и команду")
+Rel(registryClient, registry, "Получает параметры", "HTTP/JSON")
+Rel(commands, repo, "Сохраняет команду, проверяет повторы")
+Rel(commands, adapter, "Выполняет команду с тайм-аутом")
+Rel(adapter, device, "Отправляет команду, получает результат", "Протокол партнёра")
+Rel(commands, state, "Передаёт результат или ошибку")
+Rel(state, repo, "Читает и сохраняет состояние и результат")
+Rel(repo, db, "Чтение и запись в собственной схеме", "SQL")
+
+legend right
+    Шаблон трёх отдельных сервисов, не общий сервис.
+    Успех команды требует подтверждения устройства.
+    При тайм-ауте результат может быть неизвестен.
+endlegend
+@enduml

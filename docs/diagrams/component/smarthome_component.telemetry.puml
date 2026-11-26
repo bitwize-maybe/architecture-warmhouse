@@ -1,0 +1,35 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Тёплый дом — телеметрия
+
+Container(web, "Веб-приложение", "Веб-клиент")
+Container(automation, "Сервис автоматизации", "Go, HTTP API")
+Container(access, "Сервис управления доступом", "Go, HTTP API")
+Container(registry, "Сервис подключения устройств", "Go, HTTP API")
+ContainerDb(db, "Общая БД", "PostgreSQL", "Схема telemetry")
+System_Ext(sensors, "Датчики", "Температурные и другие")
+
+Container_Boundary(telemetry, "Сервис телеметрии") {
+    Component(api, "API измерений", "Go", "Запрос показаний и времени измерения")
+    Component(scheduler, "Планировщик опроса", "Go", "Периодический сбор")
+    Component(collector, "Сборщик измерений", "Go", "Опрос и проверка показаний")
+    Component(adapter, "Адаптер датчиков", "Go", "Протоколы и форматы измерений")
+    Component(accessClient, "Клиент доступа", "Go", "Проверка прав")
+    Component(registryClient, "Клиент реестра", "Go", "Активные датчики и параметры")
+    Component(repo, "Репозиторий", "Go", "Измерения и время сбора")
+}
+
+Rel(web, api, "Получает показания", "HTTPS/JSON")
+Rel(automation, api, "Опрашивает измерения", "HTTP/JSON")
+Rel(api, accessClient, "Проверяет права пользователя или сервиса")
+Rel(accessClient, access, "Проверяет доступ", "HTTP/JSON")
+Rel(api, repo, "Читает измерения")
+Rel(scheduler, collector, "Запускает сбор")
+Rel(collector, registryClient, "Получает датчики")
+Rel(registryClient, registry, "Запрашивает параметры", "HTTP/JSON")
+Rel(collector, adapter, "Запрашивает показания с тайм-аутом")
+Rel(adapter, sensors, "Опрашивает датчики", "Протоколы партнёров")
+Rel(collector, repo, "Сохраняет корректные измерения")
+Rel(repo, db, "Чтение и запись", "SQL")
+@enduml

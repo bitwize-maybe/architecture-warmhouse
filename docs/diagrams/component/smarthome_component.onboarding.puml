@@ -1,0 +1,33 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Тёплый дом — подключение устройств
+
+Container(web, "Веб-приложение", "Веб-клиент")
+Container(services, "Сервисы управления и мониторинга", "Go", "Включая автоматизацию")
+Container(access, "Сервис управления доступом", "Go, HTTP API")
+ContainerDb(db, "Общая БД", "PostgreSQL", "Схема registry")
+System_Ext(device, "Устройства партнёров", "Модули, датчики, камеры и исполнительные устройства")
+
+Container_Boundary(registry, "Сервис подключения устройств") {
+    Component(api, "HTTP API", "Go", "Регистрация, настройка и каталог")
+    Component(onboarding, "Подключение", "Go", "Подтверждение владения и активация")
+    Component(catalog, "Реестр и возможности", "Go", "Модули, устройства, типы и протоколы")
+    Component(adapter, "Адаптер настройки", "Go", "Сопряжение и конфигурация")
+    Component(accessClient, "Клиент доступа", "Go", "Проверка прав")
+    Component(repo, "Репозиторий", "Go", "Данные устройств")
+}
+
+Rel(web, api, "Подключает и настраивает устройства", "HTTPS/JSON")
+Rel(services, api, "Получают параметры и возможности", "HTTP/JSON")
+Rel(api, accessClient, "Проверяет права пользователя или сервиса")
+Rel(accessClient, access, "Проверяет доступ", "HTTP/JSON")
+Rel(api, onboarding, "Регистрирует, настраивает и отключает")
+Rel(api, catalog, "Запрашивает устройства и типы")
+Rel(onboarding, catalog, "Проверяет тип и возможности")
+Rel(onboarding, adapter, "Подключает и настраивает")
+Rel(adapter, device, "Подтверждает владение, применяет настройки", "Протоколы партнёров")
+Rel(onboarding, repo, "Сохраняет привязку и статус")
+Rel(catalog, repo, "Читает каталог")
+Rel(repo, db, "Чтение и запись", "SQL")
+@enduml

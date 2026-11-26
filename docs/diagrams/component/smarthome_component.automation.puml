@@ -1,0 +1,50 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Тёплый дом — автоматизация
+
+Container(web, "Веб-приложение", "Веб-клиент")
+Container(access, "Сервис управления доступом", "Go, HTTP API")
+Container(registry, "Сервис подключения устройств", "Go, HTTP API")
+Container(telemetry, "Сервис телеметрии", "Go, HTTP API")
+Container(control, "Сервисы управления", "Go, HTTP API", "Отопление, освещение и ворота")
+ContainerDb(db, "Общая БД", "PostgreSQL", "Схема automation")
+
+Container_Boundary(automation, "Сервис автоматизации") {
+    Component(api, "API сценариев", "Go", "Сценарии, расписания и результаты")
+    Component(scenarios, "Менеджер сценариев", "Go", "Проверка и настройка правил")
+    Component(scheduler, "Планировщик", "Go", "Расписания и периодическая проверка условий")
+    Component(evaluator, "Проверка условий", "Go", "Сравнение свежих измерений с условиями")
+    Component(execution, "Менеджер запусков", "Go", "Учёт запусков и защита от повторного срабатывания")
+    Component(dispatcher, "Выполнение действий", "Go", "Вызовы команд от имени владельца")
+    Component(accessClient, "Клиент доступа", "Go", "Проверка прав")
+    Component(registryClient, "Клиент реестра", "Go", "Проверка устройств и действий")
+    Component(telemetryClient, "Клиент телеметрии", "Go", "Получение измерений")
+    Component(repo, "Репозиторий", "Go", "Сценарии, расписания и запуски")
+}
+
+Rel(web, api, "Настраивает сценарии", "HTTPS/JSON")
+Rel(api, accessClient, "Проверяет права")
+Rel(accessClient, access, "Проверяет доступ", "HTTP/JSON")
+Rel(api, scenarios, "Изменяет сценарий")
+Rel(api, repo, "Читает сценарии и результаты")
+Rel(scenarios, registryClient, "Проверяет устройства и действия")
+Rel(registryClient, registry, "Получает возможности", "HTTP/JSON")
+Rel(scenarios, repo, "Сохраняет правила")
+Rel(scheduler, repo, "Читает активные сценарии")
+Rel(scheduler, evaluator, "Запускает проверку")
+Rel(evaluator, telemetryClient, "Получает показания")
+Rel(telemetryClient, telemetry, "Опрашивает измерения", "HTTP/JSON")
+Rel(evaluator, execution, "Передаёт результат проверки")
+Rel(scheduler, execution, "Запускает действие по расписанию")
+Rel(execution, repo, "Фиксирует срабатывание и результат")
+Rel(execution, dispatcher, "Выполняет разрешённый запуск")
+Rel(dispatcher, control, "Вызывает команды с идентификатором запуска", "HTTP/JSON")
+Rel(repo, db, "Чтение и запись", "SQL")
+
+legend right
+    Без брокера: периодический опрос телеметрии.
+    Устаревшие измерения не запускают действия.
+    Сервисы управления проверяют права владельца.
+endlegend
+@enduml
