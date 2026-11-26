@@ -1,0 +1,79 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title Тёплый дом — контейнеры целевой системы (To-Be)
+
+Person(user, "Пользователь", "Управляет умным домом")
+
+System_Boundary(smarthome, "Тёплый дом") {
+    Container(web, "Веб-приложение", "Веб-клиент", "Устройства, мониторинг и сценарии")
+    Container(access, "Сервис управления доступом", "Go, HTTP API", "Аутентификация, пользователи, дома и права доступа")
+    Container(registry, "Сервис подключения устройств", "Go, HTTP API", "Регистрация, настройка и каталог устройств")
+    Container(heating, "Сервис управления отоплением", "Go, HTTP API", "Команды и состояние отопления")
+    Container(lighting, "Сервис управления освещением", "Go, HTTP API", "Команды и состояние освещения")
+    Container(gates, "Сервис управления воротами", "Go, HTTP API", "Команды и состояние замков")
+    Container(telemetry, "Сервис телеметрии", "Go, HTTP API", "Опрос датчиков и измерения")
+    Container(video, "Сервис видеонаблюдения", "Go, HTTP API, WebRTC", "Сеансы просмотра и видео")
+    Container(automation, "Сервис автоматизации", "Go, HTTP API", "Сценарии и расписания")
+    ContainerDb(db, "Общая база данных", "PostgreSQL", "Схема и роль на сервис")
+}
+
+System_Ext(heaters, "Устройства отопления", "Оборудование партнёров")
+System_Ext(lights, "Осветительные устройства", "Оборудование партнёров")
+System_Ext(locks, "Замки ворот", "Оборудование партнёров")
+System_Ext(sensors, "Датчики", "Температурные и другие датчики партнёров")
+System_Ext(cameras, "Камеры", "Оборудование партнёров")
+
+Rel(user, web, "Управляет умным домом")
+Rel(web, access, "Вход, дома и доступ", "HTTPS/JSON")
+Rel(web, registry, "Подключает и настраивает устройства", "HTTPS/JSON")
+Rel(web, heating, "Управляет отоплением, получает состояние", "HTTPS/JSON")
+Rel(web, lighting, "Управляет светом, получает состояние", "HTTPS/JSON")
+Rel(web, gates, "Управляет замками ворот, получает состояние", "HTTPS/JSON")
+Rel(web, telemetry, "Получает измерения", "HTTPS/JSON")
+Rel(web, video, "Открывает сеанс просмотра", "HTTPS/JSON")
+Rel(video, web, "Передаёт видео", "WebRTC")
+Rel(web, automation, "Настраивает сценарии", "HTTPS/JSON")
+
+Rel(registry, access, "Проверяет доступ к дому", "HTTP/JSON")
+Rel(heating, access, "Проверяет доступ к дому", "HTTP/JSON")
+Rel(lighting, access, "Проверяет доступ к дому", "HTTP/JSON")
+Rel(gates, access, "Проверяет доступ к дому", "HTTP/JSON")
+Rel(telemetry, access, "Проверяет доступ к дому", "HTTP/JSON")
+Rel(video, access, "Проверяет доступ к дому", "HTTP/JSON")
+Rel(automation, access, "Проверяет доступ к дому", "HTTP/JSON")
+
+Rel(heating, registry, "Получает параметры устройств", "HTTP/JSON")
+Rel(lighting, registry, "Получает параметры устройств", "HTTP/JSON")
+Rel(gates, registry, "Получает параметры устройств", "HTTP/JSON")
+Rel(telemetry, registry, "Получает параметры датчиков", "HTTP/JSON")
+Rel(video, registry, "Получает параметры камер", "HTTP/JSON")
+Rel(automation, registry, "Проверяет возможности устройств", "HTTP/JSON")
+
+Rel(automation, telemetry, "Опрашивает измерения", "HTTP/JSON")
+Rel(automation, heating, "Вызывает команды", "HTTP/JSON")
+Rel(automation, lighting, "Вызывает команды", "HTTP/JSON")
+Rel(automation, gates, "Вызывает команды", "HTTP/JSON")
+
+Rel(heating, heaters, "Команды, результаты и состояние", "Протоколы партнёров")
+Rel(lighting, lights, "Команды, результаты и состояние", "Протоколы партнёров")
+Rel(gates, locks, "Команды, результаты и состояние", "Протоколы партнёров")
+Rel(telemetry, sensors, "Запрашивает показания", "Протоколы партнёров")
+Rel(video, cameras, "Получает видеопоток", "Протоколы партнёров")
+
+Rel(access, db, "Пользователи, дома и права", "SQL, схема access")
+Rel(registry, db, "Модули и устройства", "SQL, схема registry")
+Rel(heating, db, "Команды и состояние", "SQL, схема heating")
+Rel(lighting, db, "Команды и состояние", "SQL, схема lighting")
+Rel(gates, db, "Команды и состояние", "SQL, схема gates")
+Rel(telemetry, db, "Измерения", "SQL, схема telemetry")
+Rel(video, db, "Метаданные сеансов", "SQL, схема video")
+Rel(automation, db, "Сценарии и запуски", "SQL, схема automation")
+
+legend right
+    Синхронные вызовы с тайм-аутами; без брокера.
+    Доступ к БД только в собственной схеме.
+    Адаптеры протоколов внутри сервисов.
+endlegend
+
+@enduml
