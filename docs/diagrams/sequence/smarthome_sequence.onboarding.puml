@@ -1,0 +1,48 @@
+@startuml
+title Тёплый дом — подключение нового устройства
+autonumber
+
+actor "Пользователь" as user
+participant "Веб-приложение" as web
+participant "Менеджер подключения" as onboarding
+participant "Сервис доступа" as access
+participant "Адаптер настройки" as adapter
+participant "Устройство" as device
+participant "Репозиторий устройств" as repo
+
+user -> web: Выбрать дом, устройство и код подключения
+web -> onboarding: Подключить устройство к дому
+onboarding -> access: Проверить право подключения к дому
+access --> onboarding: Решение
+alt Нет доступа
+    onboarding --> web: Отказ в доступе
+else Доступ разрешён
+    onboarding -> repo: Зарезервировать или получить регистрацию
+    repo --> onboarding: Устройство или конфликт привязки
+    alt Устройство уже привязано к чужому дому
+        onboarding --> web: Конфликт регистрации
+    else Регистрация уже существует
+        onboarding --> web: Текущий статус
+    else Новая регистрация
+        onboarding -> adapter: Проверить владение и настроить
+        adapter -> device: Проверить код, применить настройки
+        alt Подключение подтверждено
+            device --> adapter: Подтверждение
+            adapter --> onboarding: ACTIVE
+        else Проверка отклонена
+            device --> adapter: Отказ
+            adapter --> onboarding: REJECTED
+        else Тайм-аут
+            adapter --> onboarding: RECONCILIATION_REQUIRED
+        end
+        onboarding -> repo: Сохранить статус устройства
+        onboarding --> web: Результат подключения
+    end
+end
+web --> user: Показать результат
+
+note over onboarding,repo
+    Репозиторий работает со схемой registry общей PostgreSQL.
+    Неопределённый результат требует сверки с устройством.
+end note
+@enduml

@@ -1,0 +1,47 @@
+@startuml
+title Тёплый дом — отопление по температуре
+autonumber
+
+participant "Сервис автоматизации" as automation
+participant "Сервис телеметрии" as telemetry
+participant "Сервис отопления" as heating
+participant "Сервис доступа" as access
+participant "Реестр устройств" as registry
+participant "Отопительный прибор" as device
+database "PostgreSQL" as db
+
+automation -> db: Получить сценарий (схема automation)
+db --> automation: Условие, действие и владелец
+automation -> telemetry: Получить температуру от имени владельца
+telemetry --> automation: Значение и время измерения
+
+opt Измерение свежее, условие выполнено, новое срабатывание
+    automation -> heating: Включить отопление (владелец, ключ команды)
+    heating -> registry: Получить устройство и возможности
+    registry --> heating: Параметры устройства и дом
+    heating -> access: Проверить права владельца
+    access --> heating: Решение
+    alt Доступ запрещён или команда недопустима
+        heating --> automation: Отказ
+    else Команда разрешена
+        heating -> db: Создать или получить команду (схема heating)
+        db --> heating: Команда и статус
+        opt Новая команда
+            heating -> device: Включить отопление
+            alt Получено подтверждение
+                device --> heating: Результат
+                heating -> db: Сохранить SUCCEEDED или FAILED
+            else Тайм-аут
+                heating -> db: Сохранить UNKNOWN
+            end
+        end
+        heating --> automation: Статус команды
+    end
+    automation -> db: Сохранить результат запуска (схема automation)
+end
+
+note over automation,device
+    Синхронные вызовы с тайм-аутами, без брокера.
+    Повтор команды не приводит к повторной отправке устройству.
+end note
+@enduml
