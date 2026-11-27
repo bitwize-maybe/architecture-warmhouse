@@ -1,0 +1,29 @@
+@startuml
+title Тёплый дом — модель исполнения команд (To-Be)
+hide empty members
+
+class CommandHandler {
+    +execute(command: Command)
+}
+class Command {
+    +id: UUID
+    +deviceId: UUID
+    +action: String
+    +status: String
+}
+interface CommandRepository {
+    +save(command: Command)
+}
+interface DeviceAdapter {
+    +execute(command: Command): String
+}
+
+CommandHandler ..> Command
+CommandHandler --> CommandRepository : сохраняет команду и результат
+CommandHandler --> DeviceAdapter : выполняет команду
+
+note top of CommandHandler
+    Общая структура трёх отдельных сервисов:
+    отопление, освещение, ворота.
+end note
+@enduml

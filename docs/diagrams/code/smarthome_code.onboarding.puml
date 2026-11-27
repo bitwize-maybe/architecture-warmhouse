@@ -1,0 +1,30 @@
+@startuml
+title Тёплый дом — модель подключения устройств (To-Be)
+hide empty members
+
+class OnboardingManager {
+    +connect(device: Device, pairingCode: String)
+}
+class Device {
+    +id: UUID
+    +houseId: UUID
+    +status: String
+    +activate()
+}
+class DeviceType {
+    +name: String
+    +protocol: String
+}
+interface DeviceRepository {
+    +save(device: Device)
+}
+interface PairingAdapter {
+    +verifyAndConfigure(device: Device, pairingCode: String): Boolean
+}
+
+OnboardingManager --> DeviceRepository : сохраняет устройство
+OnboardingManager --> PairingAdapter : проверяет владение и настраивает
+OnboardingManager ..> Device : активирует после подтверждения
+Device "0..*" --> "1" DeviceType : тип
+
+@enduml
