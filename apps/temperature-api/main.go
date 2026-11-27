@@ -24,20 +24,31 @@ func temperature(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	location := strings.TrimSpace(r.URL.Query().Get("location"))
+	sensorID := r.PathValue("sensor_id")
 	if location == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Укажите параметр location"})
-		return
+		switch sensorID {
+		case "1":
+			location = "Living Room"
+		case "2":
+			location = "Bedroom"
+		case "3":
+			location = "Kitchen"
+		default:
+			location = "Unknown"
+		}
 	}
 
-	sensorID := "0"
-	switch location {
-	case "Living Room":
-		sensorID = "1"
-	case "Bedroom":
-		sensorID = "2"
-	case "Kitchen":
-		sensorID = "3"
+	if sensorID == "" {
+		switch location {
+		case "Living Room":
+			sensorID = "1"
+		case "Bedroom":
+			sensorID = "2"
+		case "Kitchen":
+			sensorID = "3"
+		default:
+			sensorID = "0"
+		}
 	}
 
 	response := TemperatureResponse{
@@ -58,6 +69,7 @@ func temperature(w http.ResponseWriter, r *http.Request) {
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /temperature", temperature)
+	mux.HandleFunc("GET /temperature/{sensor_id}", temperature)
 	server := &http.Server{
 		Addr:              ":8081",
 		Handler:           mux,
