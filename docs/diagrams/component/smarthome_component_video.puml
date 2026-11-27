@@ -1,0 +1,35 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Тёплый дом — видеонаблюдение
+
+Container(web, "Веб-приложение", "Веб-клиент")
+Container(access, "Сервис управления доступом", "Go, HTTP API")
+Container(registry, "Сервис подключения устройств", "Go, HTTP API")
+ContainerDb(db, "Общая БД", "PostgreSQL", "Схема video; без видеозаписей")
+System_Ext(cameras, "Камеры", "Видеопотоки партнёров")
+
+Container_Boundary(video, "Сервис видеонаблюдения") {
+    Component(api, "API просмотра", "Go", "Открытие и закрытие сеансов")
+    Component(sessions, "Менеджер сеансов", "Go", "Создание, завершение и срок действия")
+    Component(adapter, "Адаптер камер", "Go", "Подключение к видеопотоку")
+    Component(media, "Медиашлюз", "WebRTC", "Передача видео авторизованному клиенту")
+    Component(accessClient, "Клиент доступа", "Go", "Проверка прав просмотра")
+    Component(registryClient, "Клиент реестра", "Go", "Параметры камер")
+    Component(repo, "Репозиторий", "Go", "Метаданные сеансов")
+}
+
+Rel(web, api, "Управляет сеансом", "HTTPS/JSON")
+Rel(api, accessClient, "Проверяет права просмотра")
+Rel(accessClient, access, "Проверяет доступ к дому", "HTTP/JSON")
+Rel(api, sessions, "Открывает и закрывает сеанс")
+Rel(sessions, registryClient, "Получает камеру")
+Rel(registryClient, registry, "Запрашивает параметры", "HTTP/JSON")
+Rel(sessions, adapter, "Открывает и закрывает поток")
+Rel(adapter, cameras, "Получает видео", "Протокол камеры")
+Rel(adapter, media, "Передаёт поток")
+Rel(sessions, media, "Разрешает передачу на срок сеанса")
+Rel(media, web, "Передаёт видео", "WebRTC")
+Rel(sessions, repo, "Сохраняет статус сеанса")
+Rel(repo, db, "Чтение и запись", "SQL")
+@enduml

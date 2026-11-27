@@ -1,0 +1,497 @@
+openapi: 3.0.3
+info:
+  title: Тёплый дом — контракты сервисов
+  version: 1.0.0
+  description: Проектируемый синхронный REST API. Адреса условные; доступ проверяется по владельцу дома.
+servers:
+  - url: https://registry.example.test/api/v1
+    description: Сервис подключения устройств
+security:
+  - bearerAuth: []
+tags:
+  - name: Устройства
+  - name: Отопление
+  - name: Телеметрия
+paths:
+  /devices:
+    post:
+      tags: [Устройства]
+      operationId: connectDevice
+      summary: Подключить устройство
+      description: |
+        Тип и модуль назначаются сервером; модуль должен быть включён в доме.
+        Код подключения не сохраняется. При 202 статус проверяется через GET устройства.
+        Повтор ключа возвращает результат; другое тело с тем же ключом — 409.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [house_id, external_id, name, pairing_code]
+              properties:
+                house_id:
+                  type: string
+                  format: uuid
+                external_id:
+                  type: string
+                  minLength: 1
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                location:
+                  type: string
+                  minLength: 1
+                pairing_code:
+                  type: string
+                  minLength: 1
+                  writeOnly: true
+            examples:
+              temperatureSensor:
+                value:
+                  house_id: 11111111-1111-4111-8111-111111111111
+                  external_id: partner-sensor-42
+                  name: Датчик кухни
+                  location: Kitchen
+                  pairing_code: example-pairing-code
+      responses:
+        '201':
+          description: Устройство активно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+              examples:
+                active:
+                  $ref: '#/components/examples/Device'
+        '202':
+          description: Регистрация сохранена, требуется сверка с устройством
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+              examples:
+                awaitingReconciliation:
+                  value:
+                    id: 22222222-2222-4222-8222-222222222222
+                    module_id: 33333333-3333-4333-8333-333333333333
+                    type_id: 44444444-4444-4444-8444-444444444444
+                    external_id: partner-sensor-42
+                    name: Датчик кухни
+                    onboarding_status: reconciliation_required
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          description: Неподдерживаемый тип, модуль не включён или код подключения отклонён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                moduleDisabled:
+                  value: {code: module_disabled, message: Модуль для этого типа устройства не включён}
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /devices/{device_id}:
+    parameters:
+      - $ref: '#/components/parameters/DeviceId'
+    get:
+      tags: [Устройства]
+      operationId: getDevice
+      summary: Получить устройство
+      description: Тип, модуль и статус регистрации для сервисов управления и мониторинга.
+      responses:
+        '200':
+          $ref: '#/components/responses/Device'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      tags: [Устройства]
+      operationId: replaceDeviceMetadata
+      summary: Заменить редактируемые данные устройства
+      description: Заменяет name и location. Тип, модуль и статус назначаются сервером. Отсутствующий location сбрасывается.
+      requestBody:
+        $ref: '#/components/requestBodies/DeviceMetadata'
+      responses:
+        '200':
+          $ref: '#/components/responses/Device'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [Устройства]
+      operationId: updateDeviceMetadata
+      summary: Изменить имя устройства
+      description: Обновляет name и/или location. Остальные поля не меняются.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                name: {type: string, minLength: 1, maxLength: 100}
+                location: {type: string, minLength: 1}
+            examples:
+              move:
+                value: {location: Bedroom}
+      responses:
+        '200':
+          $ref: '#/components/responses/Device'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Устройства]
+      operationId: deleteDevice
+      summary: Удалить регистрацию устройства
+      description: Удаляет регистрацию, не модуль и не историю. Ссылки активных сценариев запрещают удаление (409); недоступность проверки — 503.
+      responses:
+        '204':
+          description: Регистрация удалена, без тела ответа
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /heating/devices/{device_id}/commands:
+    servers:
+      - url: https://heating.example.test/api/v1
+        description: Сервис отопления
+    post:
+      tags: [Отопление]
+      operationId: executeHeatingCommand
+      summary: Выполнить команду отопления
+      description: |
+        Автоматизация вызывает от имени владельца. Проверяются доступ, модуль и команда.
+        Ожидается подтверждение устройства: succeeded — успех, failed — отказ,
+        unknown — потеря ответа. HTTP 200 не гарантирует успех команды.
+        Повтор ключа не повторяет отправку; другое тело с тем же ключом — 409.
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [turn_on, turn_off]
+            examples:
+              turnOn:
+                value: {action: turn_on}
+              turnOff:
+                value: {action: turn_off}
+      responses:
+        '200':
+          description: Сохранённый результат команды
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Command'
+              examples:
+                succeeded:
+                  value:
+                    id: 55555555-5555-4555-8555-555555555555
+                    device_id: 66666666-6666-4666-8666-666666666666
+                    action: turn_on
+                    status: succeeded
+                    reported_state: {power: 'on'}
+                timeout:
+                  value:
+                    id: 55555555-5555-4555-8555-555555555555
+                    device_id: 66666666-6666-4666-8666-666666666666
+                    action: turn_on
+                    status: unknown
+                    reported_state: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /devices/{device_id}/telemetry:
+    servers:
+      - url: https://telemetry.example.test/api/v1
+        description: Сервис телеметрии
+    get:
+      tags: [Телеметрия]
+      operationId: getTelemetry
+      summary: Получить измерения устройства
+      description: |
+        Сохранённые измерения от новых к старым, без опроса датчика.
+        Автоматизация проверяет свежесть по measured_at. Если данных нет — пустой список.
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+        - name: metric
+          in: query
+          schema: {type: string, minLength: 1}
+          example: temperature
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 1}
+      responses:
+        '200':
+          description: Измерения устройства
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Measurement'
+              examples:
+                temperature:
+                  value:
+                    items:
+                      - metric: temperature
+                        value: 17.5
+                        unit: celsius
+                        measured_at: '2026-11-27T08:30:00Z'
+                empty:
+                  value: {items: []}
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Сервисный токен с контекстом владельца дома
+  parameters:
+    DeviceId:
+      name: device_id
+      in: path
+      required: true
+      description: Идентификатор устройства
+      schema: {type: string, format: uuid}
+      example: 22222222-2222-4222-8222-222222222222
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Ключ защиты от повторного выполнения
+      schema: {type: string, format: uuid}
+      example: 88888888-8888-4888-8888-888888888888
+  schemas:
+    Device:
+      type: object
+      required: [id, module_id, type_id, external_id, name, onboarding_status]
+      properties:
+        id: {type: string, format: uuid, readOnly: true}
+        module_id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Включённый модуль дома, назначенный по типу устройства
+        type_id: {type: string, format: uuid, readOnly: true}
+        external_id: {type: string, readOnly: true}
+        name: {type: string, minLength: 1, maxLength: 100}
+        location: {type: string, minLength: 1}
+        onboarding_status:
+          type: string
+          readOnly: true
+          enum: [pending, active, rejected, reconciliation_required]
+    DeviceMetadata:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 100}
+        location: {type: string, minLength: 1}
+    Command:
+      type: object
+      required: [id, device_id, action, status]
+      properties:
+        id: {type: string, format: uuid}
+        device_id: {type: string, format: uuid}
+        action: {type: string, enum: [turn_on, turn_off]}
+        status: {type: string, enum: [pending, succeeded, failed, unknown]}
+        reported_state:
+          type: object
+          nullable: true
+          description: Подтверждённое состояние; null, если оно неизвестно
+          properties:
+            power: {type: string, enum: ['on', 'off']}
+    Measurement:
+      type: object
+      required: [metric, value, unit, measured_at]
+      properties:
+        metric: {type: string}
+        value: {type: number}
+        unit: {type: string}
+        measured_at: {type: string, format: date-time}
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: {type: string}
+        message: {type: string}
+  examples:
+    Device:
+      value:
+        id: 22222222-2222-4222-8222-222222222222
+        module_id: 33333333-3333-4333-8333-333333333333
+        type_id: 44444444-4444-4444-8444-444444444444
+        external_id: partner-sensor-42
+        name: Датчик кухни
+        location: Kitchen
+        onboarding_status: active
+  requestBodies:
+    DeviceMetadata:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DeviceMetadata'
+          examples:
+            rename:
+              value: {name: Датчик гостиной}
+  responses:
+    Device:
+      description: Данные устройства
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Device'
+          examples:
+            device:
+              $ref: '#/components/examples/Device'
+    BadRequest:
+      description: Некорректные параметры или тело запроса
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            invalidRequest:
+              value: {code: invalid_request, message: Проверьте параметры запроса}
+    Unauthorized:
+      description: Токен отсутствует, недействителен или истёк
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            unauthorized:
+              value: {code: unauthorized, message: Требуется действительный токен}
+    Forbidden:
+      description: Нет доступа к дому или операции
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            forbidden:
+              value: {code: forbidden, message: Доступ запрещён}
+    NotFound:
+      description: Устройство или дом не найдены
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            notFound:
+              value: {code: not_found, message: Объект не найден}
+    Conflict:
+      description: Конфликт привязки, ключа операции, состояния устройства или ссылок сценария
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            conflict:
+              value: {code: conflict, message: Операция противоречит текущему состоянию}
+    Unavailable:
+      description: Зависимый сервис недоступен
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            unavailable:
+              value: {code: dependency_unavailable, message: Зависимый сервис временно недоступен}
+    InternalError:
+      description: Внутренняя ошибка
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            internalError:
+              value: {code: internal_error, message: Внутренняя ошибка сервиса}

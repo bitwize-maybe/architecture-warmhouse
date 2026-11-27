@@ -1,0 +1,28 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Тёплый дом — управление доступом
+
+Container(web, "Веб-приложение", "Веб-клиент")
+Container(services, "Другие сервисы", "Go", "Проверяют права пользователя")
+ContainerDb(db, "Общая БД", "PostgreSQL", "Схема access")
+
+Container_Boundary(access, "Сервис управления доступом") {
+    Component(api, "HTTP API", "Go", "Вход, пользователи, дома и права")
+    Component(auth, "Аутентификация", "Go", "Проверка паролей, выдача и проверка токенов")
+    Component(homes, "Управление домами", "Go", "Дома и участники")
+    Component(policy, "Авторизация", "Go", "Проверка прав на дом и действие")
+    Component(repo, "Репозиторий", "Go", "Пользователи, дома и права")
+}
+
+Rel(web, api, "Вход и управление доступом", "HTTPS/JSON")
+Rel(services, api, "Проверяют права", "HTTP/JSON")
+Rel(api, auth, "Проверяет учётные данные и токены")
+Rel(api, homes, "Управляет домами и участниками")
+Rel(api, policy, "Проверяет права")
+Rel(homes, policy, "Проверяет права на изменения")
+Rel(auth, repo, "Получает хеш пароля и данные пользователя")
+Rel(homes, repo, "Читает и изменяет дома и участников")
+Rel(policy, repo, "Получает права")
+Rel(repo, db, "Чтение и запись", "SQL")
+@enduml

@@ -1,0 +1,59 @@
+@startuml
+title Тёплый дом — модель исполнения команд (To-Be)
+hide empty members
+
+class CommandHandler {
+    +execute(actorId: UUID, command: Command): CommandStatus
+}
+class Command {
+    +id: UUID
+    +deviceId: UUID
+    +action: String
+    +idempotencyKey: String
+    +status: CommandStatus
+    +complete(status: CommandStatus)
+}
+enum CommandStatus {
+    PENDING
+    SUCCEEDED
+    FAILED
+    UNKNOWN
+}
+class Device {
+    +id: UUID
+    +houseId: UUID
+    +protocol: String
+    +supportedActions: Set
+}
+interface AccessClient {
+    +authorize(actorId: UUID, houseId: UUID, action: String): Boolean
+}
+interface RegistryClient {
+    +getDevice(deviceId: UUID): Device
+}
+interface CommandRepository {
+    +createOrGet(actorId: UUID, command: Command): Command
+    +save(command: Command)
+}
+interface DeviceAdapter {
+    +execute(device: Device, command: Command): CommandStatus
+}
+
+CommandHandler ..> Command
+CommandHandler --> AccessClient : проверяет права
+CommandHandler --> RegistryClient : получает параметры устройства
+CommandHandler --> CommandRepository : сохраняет команду и результат
+CommandHandler --> DeviceAdapter : выполняет команду
+RegistryClient ..> Device
+Command --> CommandStatus
+
+note bottom of DeviceAdapter
+    Тайм-аут после отправки: UNKNOWN.
+    Успех требует подтверждения устройства.
+end note
+
+note top of CommandHandler
+    Общая структура трёх отдельных сервисов:
+    отопление, освещение, ворота.
+end note
+@enduml
