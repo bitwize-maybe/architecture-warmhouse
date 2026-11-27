@@ -1,0 +1,144 @@
+@startuml
+title Тёплый дом — логическая модель данных
+hide circle
+skinparam linetype ortho
+
+entity "Пользователь (User)" as User {
+    * id : UUID <<PK>>
+    --
+    name : String
+}
+
+entity "Дом (House)" as House {
+    * id : UUID <<PK>>
+    --
+    * user_id : UUID <<FK>>
+    name : String
+    timezone : String
+}
+
+entity "Модуль (Module)" as Module {
+    * id : UUID <<PK>>
+    --
+    * house_id : UUID <<REF>>
+    name : String
+    category : String
+}
+
+entity "Устройство (Device)" as Device {
+    * id : UUID <<PK>>
+    --
+    * module_id : UUID <<FK>>
+    * type_id : UUID <<FK>>
+    * external_id : String <<UNIQUE>>
+    name : String
+    * onboarding_status : String
+}
+
+entity "Тип устройства (DeviceType)" as DeviceType {
+    * id : UUID <<PK>>
+    --
+    name : String
+    protocol : String
+}
+
+entity "Возможность (Capability)" as Capability {
+    * id : UUID <<PK>>
+    --
+    * device_type_id : UUID <<FK>>
+    name : String
+    kind : String
+}
+
+entity "Измерение (TelemetryData)" as TelemetryData {
+    * id : UUID <<PK>>
+    --
+    * device_id : UUID <<REF>>
+    metric : String
+    value : Decimal
+    unit : String
+    * measured_at : Timestamp
+}
+
+entity "Команда (Command)" as Command {
+    * id : UUID <<PK>>
+    --
+    * device_id : UUID <<REF>>
+    action : String
+    parameters : JSON
+    * idempotency_key : String <<UNIQUE>>
+    * status : String
+    reported_state : JSON [0..1]
+    completed_at : Timestamp [0..1]
+}
+
+entity "Сеанс просмотра (ViewingSession)" as ViewingSession {
+    * id : UUID <<PK>>
+    --
+    * device_id : UUID <<REF>>
+    * user_id : UUID <<REF>>
+    status : String
+    * expires_at : Timestamp
+}
+
+entity "Сценарий (Scenario)" as Scenario {
+    * id : UUID <<PK>>
+    --
+    * house_id : UUID <<REF>>
+    name : String
+    enabled : Boolean
+    trigger_type : String
+    schedule_expression : String [0..1]
+    last_condition_matched : Boolean
+}
+
+entity "Условие (ScenarioCondition)" as ScenarioCondition {
+    * id : UUID <<PK>>
+    --
+    * scenario_id : UUID <<FK>>
+    * device_id : UUID <<REF>>
+    metric : String
+    operator : String
+    threshold : Decimal
+}
+
+entity "Действие (ScenarioAction)" as ScenarioAction {
+    * id : UUID <<PK>>
+    --
+    * scenario_id : UUID <<FK>>
+    * device_id : UUID <<REF>>
+    command : String
+    parameters : JSON
+    position : Integer
+}
+
+entity "Запуск (ScenarioExecution)" as ScenarioExecution {
+    * id : UUID <<PK>>
+    --
+    * scenario_id : UUID <<FK>>
+    * trigger_key : String
+    status : String
+    action_results : JSON
+}
+
+User ||--o{ House : "1 → 0..много: владеет"
+House ||--o{ Module : "1 → 0..много: содержит"
+Module ||--|{ Device : "1 → 1..много: объединяет"
+DeviceType ||--o{ Device : "1 → 0..много: определяет тип"
+DeviceType ||--o{ Capability : "1 → 0..много: поддерживает"
+Device ||--o{ TelemetryData : "1 → 0..много: измерения"
+Device ||--o{ Command : "1 → 0..много: команды"
+Device ||--o{ ViewingSession : "1 → 0..много: сеансы камеры"
+User ||--o{ ViewingSession : "1 → 0..много: просматривает"
+House ||--o{ Scenario : "1 → 0..много: сценарии"
+Scenario ||--o{ ScenarioCondition : "1 → 0..много: условия"
+Scenario ||--|{ ScenarioAction : "1 → 1..много: действия"
+Scenario ||--o{ ScenarioExecution : "1 → 0..много: запуски"
+Device ||--o{ ScenarioCondition : "1 → 0..много: источник измерений"
+Device ||--o{ ScenarioAction : "1 → 0..много: цель действия"
+
+legend bottom
+    PK — первичный ключ; FK — внешний ключ внутри схемы сервиса.
+    REF — логическая ссылка между сервисами, без внешнего ключа БД.
+endlegend
+@enduml
