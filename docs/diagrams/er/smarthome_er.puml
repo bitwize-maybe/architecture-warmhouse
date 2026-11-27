@@ -32,6 +32,7 @@ entity "Устройство (Device)" as Device {
     * type_id : UUID <<FK>>
     * external_id : String <<UNIQUE>>
     name : String
+    location : String
     * onboarding_status : String
 }
 
