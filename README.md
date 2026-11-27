@@ -74,24 +74,33 @@
 
 ### 5. Визуализация контекста системы — диаграмма С4
 
-- [As-Is](docs/diagrams/context/smarthome_context.current.puml).
-- [To-Be](docs/diagrams/context/smarthome_context.target.puml).
+- [As-Is](docs/diagrams/context/smarthome_context_current.puml).
+- [To-Be](docs/diagrams/context/smarthome_context_target.puml).
 
 # Задание 2. Проектирование микросервисной архитектуры
 
-В этом задании вам нужно предоставить только диаграммы в модели C4. Мы не просим вас отдельно описывать получившиеся микросервисы и то, как вы определили взаимодействия между компонентами To-Be системы. Если вы правильно подготовите диаграммы C4, они и так это покажут.
-
 **Диаграмма контейнеров (Containers)**
 
-Добавьте диаграмму.
+- [Контейнеры целевой системы](docs/diagrams/container/smarthome_container.puml).
 
 **Диаграмма компонентов (Components)**
 
-Добавьте диаграмму для каждого из выделенных микросервисов.
+- [Управление доступом](docs/diagrams/component/smarthome_component_access.puml).
+- [Подключение устройств](docs/diagrams/component/smarthome_component_onboarding.puml).
+- [Управление устройствами — общая структура сервисов отопления, освещения и ворот](docs/diagrams/component/smarthome_component_control.puml).
+- [Телеметрия](docs/diagrams/component/smarthome_component_telemetry.puml).
+- [Видеонаблюдение](docs/diagrams/component/smarthome_component_video.puml).
+- [Автоматизация](docs/diagrams/component/smarthome_component_automation.puml).
 
 **Диаграмма кода (Code)**
 
-Добавьте одну диаграмму или несколько.
+- [Исполнение команд](docs/diagrams/code/smarthome_code_commands.puml).
+- [Подключение устройств](docs/diagrams/code/smarthome_code_onboarding.puml).
+
+**Диаграммы последовательностей**
+
+- [Отопление по температуре](docs/diagrams/sequence/smarthome_sequence_heating.puml).
+- [Подключение нового устройства](docs/diagrams/sequence/smarthome_sequence_onboarding.puml).
 
 # Задание 3. Разработка ER-диаграммы
 
@@ -161,3 +170,9 @@ Locations - название комнаты, sensorId - идентификато
 Должно при каждом вызове отображаться разное значение температуры
 
 Ревьюер будет проверять точно так же.
+
+# Использование ИИ-ассистента
+
+- Уточнение формулировок анализа монолита и границ DDD по предложенным решениям.
+- Обсуждение декомпозиции, взаимодействий сервисов и организации хранения данных.
+- Дополнение PlantUML-диаграмм (аннотация типов данных и вариантов взаимодействия).
